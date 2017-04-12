@@ -3,16 +3,17 @@ module Data.OSPUtils.Seqdiag where
 import Prelude
 
 import Data.OSPUtils.Trace
+import Data.OSPUtils.Query as TQ
 
 import qualified Data.ByteString.Lazy as BS (readFile, writeFile)
 
 
 seqdiag :: Trace -> String
-seqdiag t = concat $ seqdiag' serviceName t (getChildren t)
+seqdiag t = concat $ seqdiag' serviceName t (children t)
   where
     seqdiag' :: (Trace -> String) -> Trace -> [Trace] -> [String]
     seqdiag' f t = map (\t' -> f t ++ " => " ++ f t' ++
-                         if null (getChildren t') then ";\n"
+                         if null (children t') then ";\n"
                          else " {\n" ++ seqdiag t' ++ "}\n")
 
     serviceName :: Trace -> String
@@ -25,20 +26,14 @@ seqdiag t = concat $ seqdiag' serviceName t (getChildren t)
     serviceName (NovaVirt   ti _) = project ti ++ "-" ++ service ti ++ "-NovaVirt"
     serviceName (NeutronApi ti _) = project ti ++ "-" ++ service ti ++ "-NeutronApi"
 
-    getChildren :: Trace -> [Trace]
-    getChildren (Root         ts) = ts
-    getChildren (Wsgi       _ ts) = ts
-    getChildren (DB         _ ts) = ts
-    getChildren (RPC        _ ts) = ts
-    getChildren (ComputeApi _ ts) = ts
-    getChildren (NovaImage  _ ts) = ts
-    getChildren (NovaVirt   _ ts) = ts
-    getChildren (NeutronApi _ ts) = ts
-
 seqdiagTop :: Trace -> String
 seqdiagTop t = "seqdiag {\n" ++ seqdiag t ++ "\n}"
 
 main :: IO ()
 main = do
   json <- BS.readFile "tests/rsc/server-create-real.json"
-  writeFile "tests/rsc/out.dot" (maybe "nothing" seqdiagTop (decodeTrace json))
+  writeFile "tests/rsc/out.dot" (maybe "nothing" (seqdiagTop . TQ.filter predicate) (decodeTrace json))
+  where
+    predicate :: Trace -> Bool
+    predicate (DB _ _) = False
+    predicate _        = True

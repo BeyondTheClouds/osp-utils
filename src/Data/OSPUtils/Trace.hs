@@ -180,3 +180,24 @@ eitherDecodeTrace = eitherFormatError . eitherDecodeWith json (iparse parserTopT
   where
     eitherFormatError :: Either (JSONPath, String) a -> Either String a
     eitherFormatError = either (Left . uncurry formatError) Right
+
+
+children :: Trace -> [Trace]
+children (Root         ts) = ts
+children (Wsgi       _ ts) = ts
+children (DB         _ ts) = ts
+children (RPC        _ ts) = ts
+children (ComputeApi _ ts) = ts
+children (NovaImage  _ ts) = ts
+children (NovaVirt   _ ts) = ts
+children (NeutronApi _ ts) = ts
+
+setChildren :: Trace -> [Trace] -> Trace
+setChildren (Root          _) ts = Root ts
+setChildren (Wsgi       ti _) ts = Wsgi ti ts
+setChildren (DB         ti _) ts = DB ti ts
+setChildren (RPC        ti _) ts = RPC ti ts
+setChildren (ComputeApi ti _) ts = ComputeApi ti ts
+setChildren (NovaImage  ti _) ts = NovaImage ti ts
+setChildren (NovaVirt   ti _) ts = NovaVirt ti ts
+setChildren (NeutronApi ti _) ts = NeutronApi ti ts
