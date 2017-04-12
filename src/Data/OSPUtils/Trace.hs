@@ -8,6 +8,7 @@ import Prelude
 import Data.List (find)
 import Data.Typeable (Typeable)
 import Data.Data (Data)
+import Data.Tree
 import Control.Applicative (empty, (<|>))
 import Control.Monad
 import Data.Aeson
@@ -47,16 +48,20 @@ data (Show a, Eq a) => TraceInfo a = TraceInfo
   , req      :: a
   } deriving (Show, Eq, Typeable, Data)
 
+
 -- | An OSProfiler Trace represented as a Haskell value.
-data Trace = Wsgi (TraceInfo HTTPReq) [Trace]
-           | DB (TraceInfo DBReq) [Trace]
-           | RPC (TraceInfo PythonReq) [Trace]
-           | ComputeApi (TraceInfo PythonReq) [Trace]
-           | NovaImage (TraceInfo PythonReq) [Trace]
-           | NovaVirt (TraceInfo PythonReq) [Trace]
-           | NeutronApi (TraceInfo PythonReq) [Trace]
-           | Root [Trace]
-           deriving (Show, Eq, Typeable, Data)
+-- FIXME: Go with Data.Tree
+data TraceType = Wsgi (TraceInfo HTTPReq)
+               | DB (TraceInfo DBReq)
+               | RPC (TraceInfo PythonReq)
+               | ComputeApi (TraceInfo PythonReq)
+               | NovaImage (TraceInfo PythonReq)
+               | NovaVirt (TraceInfo PythonReq)
+               | NeutronApi (TraceInfo PythonReq)
+               | Root
+               deriving (Show, Eq, Typeable, Data)
+
+type Trace = Tree TraceType
 
 
 -- Utils
@@ -88,9 +93,9 @@ data Trace = Wsgi (TraceInfo HTTPReq) [Trace]
 (.:*-?) o s = (<=<) (pure . Just) (.:*- s) o <|> pure Nothing
 
 -- | 'Parser' for the json top 'Trace'.
-parserTopTrace :: Value -> Parser Trace
-parserTopTrace (Object o) = Root <$> o .: "children"
-parserTopTrace _          = empty
+-- parserTopTrace :: Value -> Parser Trace
+-- parserTopTrace (Object o) = Root <$> o .: "children"
+-- parserTopTrace _          = empty
 
 class (FromJSON a, Show a, Eq a) => ReqPath a where
   reqPath :: Value -> Parser a
@@ -150,54 +155,54 @@ instance (ReqPath a, FromJSON a) => FromJSON (TraceInfo a) where
     <*> reqPath v
   parseJSON _            = empty
 
-instance FromJSON Trace where
-  parseJSON (Object o)
-    =   traceType o "wsgi"        *> (Wsgi       <$> o .: "info" <*> o .: "children")
-    <|> traceType o "db"          *> (DB         <$> o .: "info" <*> o .: "children")
-    <|> traceType o "rpc"         *> (RPC        <$> o .: "info" <*> o .: "children")
-    <|> traceType o "compute_api" *> (ComputeApi <$> o .: "info" <*> o .: "children")
-    <|> traceType o "nova_image"  *> (NovaImage  <$> o .: "info" <*> o .: "children")
-    <|> traceType o "vif_driver"  *> (NovaVirt   <$> o .: "info" <*> o .: "children")
-    <|> traceType o "neutron_api" *> (NeutronApi <$> o .: "info" <*> o .: "children")
-
-    where
-      traceType :: Object -> String -> Parser String
-      traceType o n = do
-        o' <- o  .: "info" -- :: Parser Object
-        v' <- o' .: "name" -- :: Parser String
-        if v' == n
-          then pure v'
-          else mzero
-  parseJSON _          = empty
-
-
--- API
-decodeTrace :: BLI.ByteString -> Maybe Trace
-decodeTrace = decodeWith json (parse parserTopTrace)
-
-eitherDecodeTrace :: BLI.ByteString -> Either String Trace
-eitherDecodeTrace = eitherFormatError . eitherDecodeWith json (iparse parserTopTrace)
-  where
-    eitherFormatError :: Either (JSONPath, String) a -> Either String a
-    eitherFormatError = either (Left . uncurry formatError) Right
-
-
-children :: Trace -> [Trace]
-children (Root         ts) = ts
-children (Wsgi       _ ts) = ts
-children (DB         _ ts) = ts
-children (RPC        _ ts) = ts
-children (ComputeApi _ ts) = ts
-children (NovaImage  _ ts) = ts
-children (NovaVirt   _ ts) = ts
-children (NeutronApi _ ts) = ts
-
-setChildren :: Trace -> [Trace] -> Trace
-setChildren (Root          _) ts = Root ts
-setChildren (Wsgi       ti _) ts = Wsgi ti ts
-setChildren (DB         ti _) ts = DB ti ts
-setChildren (RPC        ti _) ts = RPC ti ts
-setChildren (ComputeApi ti _) ts = ComputeApi ti ts
-setChildren (NovaImage  ti _) ts = NovaImage ti ts
-setChildren (NovaVirt   ti _) ts = NovaVirt ti ts
-setChildren (NeutronApi ti _) ts = NeutronApi ti ts
+-- instance FromJSON Trace where
+--   parseJSON (Object o)
+--     =   traceType o "wsgi"        *> (Wsgi       <$> o .: "info" <*> o .: "children")
+--     <|> traceType o "db"          *> (DB         <$> o .: "info" <*> o .: "children")
+--     <|> traceType o "rpc"         *> (RPC        <$> o .: "info" <*> o .: "children")
+--     <|> traceType o "compute_api" *> (ComputeApi <$> o .: "info" <*> o .: "children")
+--     <|> traceType o "nova_image"  *> (NovaImage  <$> o .: "info" <*> o .: "children")
+--     <|> traceType o "vif_driver"  *> (NovaVirt   <$> o .: "info" <*> o .: "children")
+--     <|> traceType o "neutron_api" *> (NeutronApi <$> o .: "info" <*> o .: "children")
+--
+--     where
+--       traceType :: Object -> String -> Parser String
+--       traceType o n = do
+--         o' <- o  .: "info" -- :: Parser Object
+--         v' <- o' .: "name" -- :: Parser String
+--         if v' == n
+--           then pure v'
+--           else mzero
+--   parseJSON _          = empty
+--
+-- 
+-- -- API
+-- decodeTrace :: BLI.ByteString -> Maybe Trace
+-- decodeTrace = decodeWith json (parse parserTopTrace)
+--
+-- eitherDecodeTrace :: BLI.ByteString -> Either String Trace
+-- eitherDecodeTrace = eitherFormatError . eitherDecodeWith json (iparse parserTopTrace)
+--   where
+--     eitherFormatError :: Either (JSONPath, String) a -> Either String a
+--     eitherFormatError = either (Left . uncurry formatError) Right
+--
+--
+-- children :: Trace -> [Trace]
+-- children (Root         ts) = ts
+-- children (Wsgi       _ ts) = ts
+-- children (DB         _ ts) = ts
+-- children (RPC        _ ts) = ts
+-- children (ComputeApi _ ts) = ts
+-- children (NovaImage  _ ts) = ts
+-- children (NovaVirt   _ ts) = ts
+-- children (NeutronApi _ ts) = ts
+--
+-- setChildren :: Trace -> [Trace] -> Trace
+-- setChildren (Root          _) ts = Root ts
+-- setChildren (Wsgi       ti _) ts = Wsgi ti ts
+-- setChildren (DB         ti _) ts = DB ti ts
+-- setChildren (RPC        ti _) ts = RPC ti ts
+-- setChildren (ComputeApi ti _) ts = ComputeApi ti ts
+-- setChildren (NovaImage  ti _) ts = NovaImage ti ts
+-- setChildren (NovaVirt   ti _) ts = NovaVirt ti ts
+-- setChildren (NeutronApi ti _) ts = NeutronApi ti ts

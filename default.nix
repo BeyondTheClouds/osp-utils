@@ -6,7 +6,7 @@ _ = let ghc = haskellPackages.ghcWithHoogle (pkgs: with pkgs; [
   apply-refact hlint stylish-haskell
 
   #nix-env -qaP -A nixos.haskellPackages|fgrep aeson
-  cabal-install aeson extra HUnit
+  cabal-install aeson extra HUnit syz
 ]);
 in stdenv.mkDerivation {
   name = "osp-utils";
