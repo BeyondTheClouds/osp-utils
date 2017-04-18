@@ -1,0 +1,18 @@
+{
+  "info": {
+    "started": 0, 
+    "finished": 10633, 
+    "name": "total"
+  }, 
+  "stats": {
+    "wsgi": {
+      "count": 9, 
+      "duration": 11962
+    }, 
+    "db": {
+      "count": 573, 
+      "duration": 4167
+    }
+  }, 
+  "children": [ ]
+}

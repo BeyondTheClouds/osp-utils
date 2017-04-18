@@ -1,44 +1,41 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-
 module Data.OSPUtils.Trace where
 
 import Prelude
 
-import Data.List (find)
-import Data.Typeable (Typeable)
-import Data.Data (Data)
 import Data.Tree
+import Data.List (find)
 import Control.Applicative (empty, (<|>))
 import Control.Monad
 import Data.Aeson
 import Data.Aeson.Internal (JSONPath, iparse, formatError)
-import Data.Aeson.Types (Parser, parse)
+import Data.Aeson.Types (Parser, parse, listParser)
 import Data.Aeson.Parser (decodeWith, eitherDecodeWith, json)
 import Data.Text (Text, isSuffixOf)
 import qualified Data.HashMap.Lazy as H (lookup, keys)
 import qualified Data.ByteString.Lazy.Internal as BLI (ByteString)
 
+
 
 -- ADTs
-data HTTP = Post | Get | Update | Delete deriving (Show, Eq, Typeable, Data)
+data HTTP = Post | Get | Update | Delete deriving (Show, Eq)
 
 data HTTPReq = HTTPReq
   { path   :: String
   , method :: HTTP
   , query  :: String
-  } deriving (Show, Eq, Typeable, Data)
+  } deriving (Show, Eq)
 
 data DBReq = DBReq
   { stmt   :: String
   , params :: Value
-  } deriving (Show, Eq, Typeable, Data)
+  } deriving (Show, Eq)
 
 data PythonReq = PythonReq
   { function :: String
   , args     :: String
   , kwargs   :: String
-  } deriving (Show, Eq, Typeable, Data)
+  } deriving (Show, Eq)
 
 data (Show a, Eq a) => TraceInfo a = TraceInfo
   { project  :: String
@@ -46,11 +43,10 @@ data (Show a, Eq a) => TraceInfo a = TraceInfo
   , start    :: String
   , stop     :: Maybe String
   , req      :: a
-  } deriving (Show, Eq, Typeable, Data)
+  } deriving (Show, Eq)
 
 
 -- | An OSProfiler Trace represented as a Haskell value.
--- FIXME: Go with Data.Tree
 data TraceType = Wsgi (TraceInfo HTTPReq)
                | DB (TraceInfo DBReq)
                | RPC (TraceInfo PythonReq)
@@ -59,7 +55,7 @@ data TraceType = Wsgi (TraceInfo HTTPReq)
                | NovaVirt (TraceInfo PythonReq)
                | NeutronApi (TraceInfo PythonReq)
                | Root
-               deriving (Show, Eq, Typeable, Data)
+               deriving (Show, Eq)
 
 type Trace = Tree TraceType
 
@@ -90,12 +86,20 @@ type Trace = Tree TraceType
 -- The result is 'Nothing' if there is no key ended by 'Text' or
 -- 'empty' if the value cannot be converted to the desired type.
 (.:*-?) :: (FromJSON a) => Object -> Text -> Parser (Maybe a)
-(.:*-?) o s = (<=<) (pure . Just) (.:*- s) o <|> pure Nothing
+(.:*-?) o s = (pure . Just <=< (.:*- s)) o <|> pure Nothing
 
 -- | 'Parser' for the json top 'Trace'.
--- parserTopTrace :: Value -> Parser Trace
--- parserTopTrace (Object o) = Root <$> o .: "children"
--- parserTopTrace _          = empty
+parserTopTrace :: Value -> Parser Trace
+parserTopTrace (Object o) =
+  Node Root <$> parseChildren o
+  where
+    parseTrace :: Value -> Parser Trace
+    parseTrace v@(Object o') = Node <$> parseJSON v <*> parseChildren o'
+    parseTrace _             = empty
+
+    parseChildren :: Object -> Parser [Trace]
+    parseChildren = listParser parseTrace <=< (.: "children")
+parserTopTrace _          = empty
 
 class (FromJSON a, Show a, Eq a) => ReqPath a where
   reqPath :: Value -> Parser a
@@ -155,54 +159,32 @@ instance (ReqPath a, FromJSON a) => FromJSON (TraceInfo a) where
     <*> reqPath v
   parseJSON _            = empty
 
--- instance FromJSON Trace where
---   parseJSON (Object o)
---     =   traceType o "wsgi"        *> (Wsgi       <$> o .: "info" <*> o .: "children")
---     <|> traceType o "db"          *> (DB         <$> o .: "info" <*> o .: "children")
---     <|> traceType o "rpc"         *> (RPC        <$> o .: "info" <*> o .: "children")
---     <|> traceType o "compute_api" *> (ComputeApi <$> o .: "info" <*> o .: "children")
---     <|> traceType o "nova_image"  *> (NovaImage  <$> o .: "info" <*> o .: "children")
---     <|> traceType o "vif_driver"  *> (NovaVirt   <$> o .: "info" <*> o .: "children")
---     <|> traceType o "neutron_api" *> (NeutronApi <$> o .: "info" <*> o .: "children")
---
---     where
---       traceType :: Object -> String -> Parser String
---       traceType o n = do
---         o' <- o  .: "info" -- :: Parser Object
---         v' <- o' .: "name" -- :: Parser String
---         if v' == n
---           then pure v'
---           else mzero
---   parseJSON _          = empty
---
--- 
--- -- API
--- decodeTrace :: BLI.ByteString -> Maybe Trace
--- decodeTrace = decodeWith json (parse parserTopTrace)
---
--- eitherDecodeTrace :: BLI.ByteString -> Either String Trace
--- eitherDecodeTrace = eitherFormatError . eitherDecodeWith json (iparse parserTopTrace)
---   where
---     eitherFormatError :: Either (JSONPath, String) a -> Either String a
---     eitherFormatError = either (Left . uncurry formatError) Right
---
---
--- children :: Trace -> [Trace]
--- children (Root         ts) = ts
--- children (Wsgi       _ ts) = ts
--- children (DB         _ ts) = ts
--- children (RPC        _ ts) = ts
--- children (ComputeApi _ ts) = ts
--- children (NovaImage  _ ts) = ts
--- children (NovaVirt   _ ts) = ts
--- children (NeutronApi _ ts) = ts
---
--- setChildren :: Trace -> [Trace] -> Trace
--- setChildren (Root          _) ts = Root ts
--- setChildren (Wsgi       ti _) ts = Wsgi ti ts
--- setChildren (DB         ti _) ts = DB ti ts
--- setChildren (RPC        ti _) ts = RPC ti ts
--- setChildren (ComputeApi ti _) ts = ComputeApi ti ts
--- setChildren (NovaImage  ti _) ts = NovaImage ti ts
--- setChildren (NovaVirt   ti _) ts = NovaVirt ti ts
--- setChildren (NeutronApi ti _) ts = NeutronApi ti ts
+instance FromJSON TraceType where
+  parseJSON (Object o)
+    =   traceType o "wsgi"        *> (Wsgi       <$> o .: "info")
+    <|> traceType o "db"          *> (DB         <$> o .: "info")
+    <|> traceType o "rpc"         *> (RPC        <$> o .: "info")
+    <|> traceType o "compute_api" *> (ComputeApi <$> o .: "info")
+    <|> traceType o "nova_image"  *> (NovaImage  <$> o .: "info")
+    <|> traceType o "vif_driver"  *> (NovaVirt   <$> o .: "info")
+    <|> traceType o "neutron_api" *> (NeutronApi <$> o .: "info")
+    where
+      traceType :: Object -> String -> Parser String
+      traceType o n = do
+        o' <- o  .: "info" -- :: Parser Object
+        v' <- o' .: "name" -- :: Parser String
+        if v' == n
+          then pure v'
+          else mzero
+  parseJSON _          = empty
+
+
+-- API
+decodeTrace :: BLI.ByteString -> Maybe Trace
+decodeTrace = decodeWith json (parse parserTopTrace)
+
+eitherDecodeTrace :: BLI.ByteString -> Either String Trace
+eitherDecodeTrace = eitherFormatError . eitherDecodeWith json (iparse parserTopTrace)
+  where
+    eitherFormatError :: Either (JSONPath, String) a -> Either String a
+    eitherFormatError = either (Left . uncurry formatError) Right

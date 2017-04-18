@@ -3,37 +3,49 @@ module Data.OSPUtils.Seqdiag where
 import Prelude
 
 import Data.OSPUtils.Trace
-import Data.OSPUtils.Query as TQ
+import Data.OSPUtils.Query
 
+import Data.Maybe
+import qualified Data.Tree as T
 import qualified Data.ByteString.Lazy as BS (readFile, writeFile)
 
 
 seqdiag :: Trace -> String
-seqdiag t = concat $ seqdiag' serviceName t (children t)
+seqdiag t = concat $ seqdiag' serviceName t (T.subForest t)
   where
-    seqdiag' :: (Trace -> String) -> Trace -> [Trace] -> [String]
-    seqdiag' f t = map (\t' -> f t ++ " => " ++ f t' ++
-                         if null (children t') then ";\n"
+    seqdiag' :: (TraceType -> String) -> Trace -> [Trace] -> [String]
+    seqdiag' f t = map (\t' -> f (T.rootLabel t) ++ " => " ++ f (T.rootLabel t') ++
+                         if null (T.subForest t') then ";\n"
                          else " {\n" ++ seqdiag t' ++ "}\n")
 
-    serviceName :: Trace -> String
-    serviceName (Root          _) = "Client"
-    serviceName (Wsgi       ti _) = project ti ++ "-" ++ service ti ++ "-WSGI"
-    serviceName (DB         ti _) = project ti ++ "-" ++ service ti ++ "-DB"
-    serviceName (RPC        ti _) = project ti ++ "-" ++ service ti ++ "-RPC"
-    serviceName (ComputeApi ti _) = project ti ++ "-" ++ service ti ++ "-ComputeApi"
-    serviceName (NovaImage  ti _) = project ti ++ "-" ++ service ti ++ "-NovaImage"
-    serviceName (NovaVirt   ti _) = project ti ++ "-" ++ service ti ++ "-NovaVirt"
-    serviceName (NeutronApi ti _) = project ti ++ "-" ++ service ti ++ "-NeutronApi"
+    serviceName :: TraceType -> String
+    serviceName Root            = "Client"
+    serviceName (Wsgi       ti) = project ti ++ "-" ++ service ti ++ "-WSGI"
+    serviceName (DB         ti) = project ti ++ "-" ++ service ti ++ "-DB"
+    serviceName (RPC        ti) = project ti ++ "-" ++ service ti ++ "-RPC"
+    serviceName (ComputeApi ti) = project ti ++ "-" ++ service ti ++ "-ComputeApi"
+    serviceName (NovaImage  ti) = project ti ++ "-" ++ service ti ++ "-NovaImage"
+    serviceName (NovaVirt   ti) = project ti ++ "-" ++ service ti ++ "-NovaVirt"
+    serviceName (NeutronApi ti) = project ti ++ "-" ++ service ti ++ "-NeutronApi"
 
 seqdiagTop :: Trace -> String
 seqdiagTop t = "seqdiag {\n" ++ seqdiag t ++ "\n}"
 
+fileToTrace :: String -> IO Trace
+fileToTrace fp = do
+  json <- BS.readFile fp
+  pure $ fromMaybe (T.Node Root []) (decodeTrace json)
+
 main :: IO ()
 main = do
-  json <- BS.readFile "tests/rsc/server-create-real.json"
-  writeFile "tests/rsc/out.dot" (maybe "nothing" (seqdiagTop . TQ.filter predicate) (decodeTrace json))
+  let query = fold p
+  t <- fileToTrace "tests/rsc/server-create-real.json"
+  putStrLn $ T.drawTree $ fmap show (query t)
+  writeFile "tests/rsc/out-no-fold.txt" (T.drawTree $ show <$> t)
+  writeFile "tests/rsc/out-fold.txt" (T.drawTree $ show <$> query t)
+  writeFile "tests/rsc/out.dot" (seqdiagTop $ query t)
   where
-    predicate :: Trace -> Bool
-    predicate (DB _ _) = False
-    predicate _        = True
+    p :: TraceType -> TraceType -> Bool
+    -- p (Wsgi _) (Wsgi _) = True
+    p (DB   _) (DB   _) = True
+    p _        _        = False
