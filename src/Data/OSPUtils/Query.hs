@@ -1,26 +1,20 @@
 module Data.OSPUtils.Query where
 
 import Prelude as P
+import Data.Tree
+import Data.Tree.Zipper
 
 import Data.OSPUtils.Trace
 
-map :: (Trace -> b) -> Trace -> b
-map f t = undefined
-
-foldl :: (b -> Trace -> b) -> b -> Trace -> b
-foldl g z t = undefined
-
-
-filter :: (Trace -> Bool) -> Trace -> Trace
-filter p t | p t       = filter' t (children t)
-           | otherwise = Root []
+filter :: (TraceType -> Bool) -> Trace -> Trace
+filter p t | p (rootLabel t) = filter' t
+           | otherwise       = Node Root []
   where
-    filter' :: Trace -> [Trace] -> Trace
-    filter' r = setChildren r .
-                P.map (\t' -> filter' t' (children t')) . P.filter p
+    filter' :: Trace -> Trace
+    filter' r = let filterChildren = P.filter (p . rootLabel)
+                    filterGrandchildren = map filter'
+                in r { subForest = filterGrandchildren (
+                                     filterChildren (subForest r)) }
 
--- agg :: (Trace -> Trace -> Bool) -> Trace -> Trace
--- agg p t = agg' t (children t)
---   where
---     agg' :: Trace -> [ Trace ] -> Trace
---     agg' r ts = setChildren r (foldr (\t' -> ts' -> ) [] ts)
+aggregate :: (TraceType -> TraceType -> Bool) -> Trace -> Trace
+aggregate ag t = undefined

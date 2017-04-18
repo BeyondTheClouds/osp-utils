@@ -209,7 +209,8 @@ testsTraceInfo = TestLabel "TraceInfo Parsing" $ TestList
 testsTraces :: Test
 testsTraces = TestLabel "Trace Parsing" $ TestList $
   map (TestCase . assertParsable)
-  [ "tests/rsc/flavor-list-fake.json"
+  [ "tests/rsc/empty-root.json"
+  , "tests/rsc/flavor-list-fake.json"
   , "tests/rsc/flavor-list-real.json"
   , "tests/rsc/hypervisor-list-fake.json"
   , "tests/rsc/hypervisor-list-real.json"
