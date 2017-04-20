@@ -15,6 +15,7 @@ import Data.Text (Text, isSuffixOf)
 import qualified Data.HashMap.Lazy as H (lookup, keys)
 import qualified Data.ByteString.Lazy.Internal as BLI (ByteString)
 
+
 
 -- ADTs
 data HTTP = Post | Get | Update | Delete deriving (Show, Eq)
