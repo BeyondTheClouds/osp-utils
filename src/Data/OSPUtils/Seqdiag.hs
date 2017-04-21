@@ -38,7 +38,7 @@ fileToTrace fp = do
 
 main :: IO ()
 main = do
-  let query = fold p
+  let query = Data.OSPUtils.Query.filter p'
   t <- fileToTrace "tests/rsc/server-create-real.json"
   putStrLn $ T.drawTree $ fmap show (query t)
   writeFile "tests/rsc/out-no-fold.txt" (T.drawTree $ show <$> t)
@@ -49,3 +49,8 @@ main = do
     -- p (Wsgi _) (Wsgi _) = True
     p (DB   _) (DB   _) = True
     p _        _        = False
+
+    p' :: TraceType -> Bool
+    p' (Wsgi _) = True
+    p' (RPC _) = True
+    p' _ = False
