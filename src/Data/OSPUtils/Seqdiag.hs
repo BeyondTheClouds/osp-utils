@@ -14,7 +14,7 @@ seqdiag :: Trace -> String
 seqdiag t = concat $ seqdiag' serviceName t (T.subForest t)
   where
     seqdiag' :: (TraceType -> String) -> Trace -> [Trace] -> [String]
-    seqdiag' f t = map (\t' -> f (T.rootLabel t) ++ " => " ++ f (T.rootLabel t') ++
+    seqdiag' f t = map (\t' -> f (T.rootLabel t) ++ " => "++ f (T.rootLabel t') ++ (label (T.rootLabel t')) ++
                          if null (T.subForest t') then ";\n"
                          else " {\n" ++ seqdiag t' ++ "}\n")
 
@@ -27,6 +27,21 @@ seqdiag t = concat $ seqdiag' serviceName t (T.subForest t)
     serviceName (NovaImage  ti) = project ti ++ "-" ++ service ti ++ "-NovaImage"
     serviceName (NovaVirt   ti) = project ti ++ "-" ++ service ti ++ "-NovaVirt"
     serviceName (NeutronApi ti) = project ti ++ "-" ++ service ti ++ "-NeutronApi"
+
+    label :: TraceType -> String
+    label Root                  = "bla"
+    label (Wsgi             ti) = "[label=\""
+                                    ++ (show (method (req ti)))
+                                    ++ " "
+                                    ++ (path(req ti))
+                                    ++ "\", color=blue]"
+    label (DB               ti) = "[label=\"" ++ (stmt (req ti))  ++ "\"]"
+    label (RPC              ti) = "[label=\"" ++ (function (req ti))  ++ "\", color=green]"
+    label (ComputeApi       ti) = "[label=\"" ++ (function (req ti))  ++ "\"]"
+    label (NovaImage        ti) = "[label=\"" ++ (function (req ti))  ++ "\"]"
+    label (NovaVirt         ti) = "[label=\"" ++ (function (req ti))  ++ "\"]"
+    label (NeutronApi       ti) = "[label=\"" ++ (function (req ti))  ++ "\"]"
+
 
 seqdiagTop :: Trace -> String
 seqdiagTop t = "seqdiag {\n" ++ seqdiag t ++ "\n}"
