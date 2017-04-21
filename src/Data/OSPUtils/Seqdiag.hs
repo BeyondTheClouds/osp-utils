@@ -20,13 +20,13 @@ seqdiag t = concat $ seqdiag' serviceName t (T.subForest t)
 
     serviceName :: TraceType -> String
     serviceName Root            = "Client"
-    serviceName (Wsgi       ti) = project ti ++ "-" ++ service ti ++ "-WSGI"
-    serviceName (DB         ti) = project ti ++ "-" ++ service ti ++ "-DB"
-    serviceName (RPC        ti) = project ti ++ "-" ++ service ti ++ "-RPC"
-    serviceName (ComputeApi ti) = project ti ++ "-" ++ service ti ++ "-ComputeApi"
-    serviceName (NovaImage  ti) = project ti ++ "-" ++ service ti ++ "-NovaImage"
-    serviceName (NovaVirt   ti) = project ti ++ "-" ++ service ti ++ "-NovaVirt"
-    serviceName (NeutronApi ti) = project ti ++ "-" ++ service ti ++ "-NeutronApi"
+    serviceName (Wsgi       ti) = project ti ++ "-" ++ service ti
+    serviceName (DB         ti) = project ti ++ "-" ++ service ti
+    serviceName (RPC        ti) = project ti ++ "-" ++ service ti
+    serviceName (ComputeApi ti) = project ti ++ "-" ++ service ti
+    serviceName (NovaImage  ti) = project ti ++ "-" ++ service ti
+    serviceName (NovaVirt   ti) = project ti ++ "-" ++ service ti
+    serviceName (NeutronApi ti) = project ti ++ "-" ++ service ti
 
     label :: TraceType -> String
     label Root                  = "bla"
