@@ -90,8 +90,7 @@ type Trace = Tree TraceType
 
 -- | 'Parser' for the json top 'Trace'.
 parserTopTrace :: Value -> Parser Trace
-parserTopTrace (Object o) =
-  Node Root <$> parseChildren o
+parserTopTrace (Object o) = Node Root <$> parseChildren o
   where
     parseTrace :: Value -> Parser Trace
     parseTrace v@(Object o') = Node <$> parseJSON v <*> parseChildren o'
