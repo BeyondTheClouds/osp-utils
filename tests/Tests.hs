@@ -6,7 +6,10 @@ import System.Exit (exitSuccess, exitFailure)
 
 import qualified ParseTests
 import qualified QueryTests
-
+
+-- Remember to M-x haskell-session-change-target and choose tests or
+-- osp-utils.
+
 main :: IO ()
 main = do
   c <- runTestTT tests
@@ -15,4 +18,6 @@ main = do
     else exitFailure
 
   where
-    tests = ParseTests.testsAll ++ QueryTests.testsAll
+    tests :: Test
+    tests = TestList [ ParseTests.testsAll
+                     , QueryTests.testsAll ]
