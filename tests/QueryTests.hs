@@ -1,4 +1,4 @@
-module ParseTests (testsAll) where
+module QueryTests (testsAll) where
 
 import Test.HUnit
 
