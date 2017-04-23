@@ -210,14 +210,17 @@ testsTraces :: Test
 testsTraces = TestLabel "Trace Parsing" $ TestList $
   map (TestCase . assertParsable)
   [ "tests/rsc/empty-root.json"
-  , "tests/rsc/flavor-list-fake.json"
-  , "tests/rsc/flavor-list-real.json"
-  , "tests/rsc/hypervisor-list-fake.json"
-  , "tests/rsc/hypervisor-list-real.json"
-  , "tests/rsc/image-list-fake.json"
-  , "tests/rsc/image-list-real.json"
-  , "tests/rsc/server-create-fake.json"
-  , "tests/rsc/server-create-real.json"
+  -- , "tests/rsc/trace-boot-and-associate-floating-ip.yaml.json"
+  -- , "tests/rsc/trace-boot-and-delete.yaml.json"
+  -- , "tests/rsc/trace-boot-server-and-add-secgroup.yaml.json"
+  -- , "tests/rsc/trace-create-and-delete-image.yaml.json"
+  -- , "tests/rsc/trace-create-and-delete-networks.yaml.json"
+  -- , "tests/rsc/trace-create-and-delete-ports.yaml.json"
+  -- , "tests/rsc/trace-create-and-delete-routers.yaml.json"
+  -- , "tests/rsc/trace-create-and-delete-security-groups.yaml.json"
+  , "tests/rsc/trace-create-and-delete-security-groups.yaml.bck.json"
+  -- , "tests/rsc/trace-create-and-delete-subnets.yaml.json"
+  -- , "tests/rsc/trace-pause-and-unpause.yaml.json"
   ]
 
 
