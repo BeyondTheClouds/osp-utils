@@ -5,11 +5,11 @@ import Prelude
 
 import Data.Tree
 import Data.List (find)
-import Control.Applicative (empty, (<|>))
+import Control.Applicative ((<|>))
 import Control.Monad
 import Data.Aeson
 import Data.Aeson.Internal (JSONPath, iparse, formatError)
-import Data.Aeson.Types (Parser, parse, listParser)
+import Data.Aeson.Types (Parser, parse, listParser, typeMismatch)
 import Data.Aeson.Parser (decodeWith, eitherDecodeWith, json)
 import Data.Text (Text, isSuffixOf)
 import qualified Data.HashMap.Lazy as H (lookup, keys)
@@ -66,8 +66,11 @@ type Trace = Tree TraceType
 -- The result is 'empty' if the path '[Text]' is not present or the
 -- value cannot be converted to the desired type.
 (.:+) :: (FromJSON a) => Value -> [Text] -> Parser a
-(.:+) v = parseJSON <=< foldM ((maybe empty pure .) . lookupE) v
+(.:+) v t = parseJSON <=< foldM ((maybe err pure .) . lookupE) v $ t
   where
+    err :: Parser a
+    err = fail $ "No key path for " ++ show t ++ " in " ++ show v
+
     lookupE :: Value -> Text -> Maybe Value
     lookupE (Object v') key = H.lookup key v'
     lookupE _           _   = Nothing
@@ -76,8 +79,11 @@ type Trace = Tree TraceType
 -- The result is 'empty' if there is no key ended by 'Text' or the
 -- value cannot be converted to the desired type.
 (.:*-) :: (FromJSON a) => Object -> Text -> Parser a
-(.:*-) o = parseJSON <=< ((maybe empty pure .) . lookupRE) o
+(.:*-) o t = parseJSON <=< ((maybe err pure .) . lookupRE) o $ t
   where
+    err :: Parser a
+    err = fail $ "No key ended by " ++ show t ++ " in Object"
+
     lookupRE :: Object -> Text -> Maybe Value
     lookupRE o' suffix = do k <- find (isSuffixOf suffix) (H.keys o')
                             H.lookup k o'
@@ -88,27 +94,27 @@ type Trace = Tree TraceType
 (.:*-?) :: (FromJSON a) => Object -> Text -> Parser (Maybe a)
 (.:*-?) o s = (pure . Just <=< (.:*- s)) o <|> pure Nothing
 
+
 -- | 'Parser' for the json top 'Trace'.
 parserTopTrace :: Value -> Parser Trace
-parserTopTrace (Object o) = Node Root <$> parseChildren o
+parserTopTrace v = Node Root <$> parseChildren v
   where
     parseTrace :: Value -> Parser Trace
-    parseTrace v@(Object o') = Node <$> parseJSON v <*> parseChildren o'
-    parseTrace _             = empty
+    parseTrace v' = Node <$> parseJSON v' <*> parseChildren v'
 
-    parseChildren :: Object -> Parser [Trace]
-    parseChildren = listParser parseTrace <=< (.: "children")
-parserTopTrace _          = empty
+    parseChildren :: Value -> Parser [Trace]
+    parseChildren (Object o') = (listParser parseTrace <=< (.: "children")) o'
+    parseChildren v'           = typeMismatch "[a]" v'
 
 class (FromJSON a, Show a, Eq a) => ReqPath a where
   reqPath :: Value -> Parser a
 
 -- ReqPath instances
 instance ReqPath HTTPReq where
-  reqPath = flip (.:+) [ "meta.raw_payload.wsgi-start", "info", "request" ]
+  reqPath = (.:+ [ "meta.raw_payload.wsgi-start", "info", "request" ])
 
 instance ReqPath DBReq where
-  reqPath = flip (.:+) [ "meta.raw_payload.db-start", "info", "db" ]
+  reqPath = (.:+ [ "meta.raw_payload.db-start", "info", "db" ])
 
 instance ReqPath PythonReq where
   reqPath v =
@@ -126,28 +132,28 @@ instance FromJSON HTTP where
     "GET"    -> pure Get
     "UPDATE" -> pure Update
     "DELETE" -> pure Delete
-    _        -> empty
-  parseJSON _          = empty
+    _        -> fail $ show s ++ " is not an HTTP verb"
+  parseJSON v          = typeMismatch "HTTP Verb" v
 
 instance FromJSON HTTPReq where
   parseJSON (Object o) = HTTPReq <$>
         o .: "path"
     <*> o .: "method"
     <*> o .: "query"
-  parseJSON _          = empty
+  parseJSON v          = typeMismatch "HTTPReq" v
 
 instance FromJSON DBReq where
   parseJSON (Object o) = DBReq <$>
         o .: "statement"
     <*> o .: "params"
-  parseJSON _          = empty
+  parseJSON v          = typeMismatch "DBReq" v
 
 instance FromJSON PythonReq where
   parseJSON (Object o) = PythonReq <$>
         o .: "name"
     <*> o .: "args"
     <*> o .: "kwargs"
-  parseJSON _          = empty
+  parseJSON v          = typeMismatch "PythonReq" v
 
 instance (ReqPath a, FromJSON a) => FromJSON (TraceInfo a) where
   parseJSON v@(Object o) = TraceInfo <$>
@@ -156,7 +162,7 @@ instance (ReqPath a, FromJSON a) => FromJSON (TraceInfo a) where
     <*> ((.: "timestamp") <=< (.:*-  "-start")) o
     <*> (maybe (pure Nothing) (.: "timestamp") <=< (.:*-? "-stop"))  o
     <*> reqPath v
-  parseJSON _            = empty
+  parseJSON v            = typeMismatch "TraceInfo" v
 
 instance FromJSON TraceType where
   parseJSON (Object o)
@@ -174,8 +180,8 @@ instance FromJSON TraceType where
         v' <- o' .: "name" -- :: Parser String
         if v' == n
           then pure v'
-          else mzero
-  parseJSON _          = empty
+          else fail $ show v' ++ " is not a valid TraceType"
+  parseJSON v          = typeMismatch "TraceType" v
 
 
 -- API
