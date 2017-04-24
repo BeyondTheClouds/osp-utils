@@ -4,7 +4,6 @@ module Data.OSPUtils.Trace where
 import Prelude
 
 import Data.Tree
-import Data.List (find)
 import Control.Applicative ((<|>))
 import Control.Monad
 import Data.Aeson
@@ -12,8 +11,9 @@ import Data.Aeson.Internal (JSONPath, iparse, formatError)
 import Data.Aeson.Types (Parser, parse, listParser, typeMismatch)
 import Data.Aeson.Parser (decodeWith, eitherDecodeWith, json)
 import Data.Text (Text, isSuffixOf)
-import qualified Data.HashMap.Lazy as H (lookup, keys)
-import qualified Data.ByteString.Lazy.Internal as BLI (ByteString)
+import qualified Data.List as L
+import qualified Data.HashMap.Lazy as H
+import qualified Data.ByteString.Lazy.Internal as BLI
 
 
 
@@ -85,7 +85,7 @@ type Trace = Tree TraceType
     err = fail $ "No key ended by " ++ show t ++ " in Object"
 
     lookupRE :: Object -> Text -> Maybe Value
-    lookupRE o' suffix = do k <- find (isSuffixOf suffix) (H.keys o')
+    lookupRE o' suffix = do k <- L.find (isSuffixOf suffix) (H.keys o')
                             H.lookup k o'
 
 -- | Retrieve the value associated with the ended key of an 'Object'.
@@ -114,7 +114,8 @@ instance ReqPath HTTPReq where
   reqPath = (.:+ [ "meta.raw_payload.wsgi-start", "info", "request" ])
 
 instance ReqPath DBReq where
-  reqPath = (.:+ [ "meta.raw_payload.db-start", "info", "db" ])
+  reqPath v = v .:+ [ "meta.raw_payload.db-start", "info", "db" ]
+          <|> v .:+ [ "meta.raw_payload.neutron.db-start", "info", "db" ]
 
 instance ReqPath PythonReq where
   reqPath v =
@@ -167,7 +168,7 @@ instance (ReqPath a, FromJSON a) => FromJSON (TraceInfo a) where
 instance FromJSON TraceType where
   parseJSON (Object o)
     =   traceType o "wsgi"        *> (Wsgi       <$> o .: "info")
-    <|> traceType o "db"          *> (DB         <$> o .: "info")
+    <|> (traceType o "db" <|> traceType o "neutron.db")          *> (DB         <$> o .: "info")
     <|> traceType o "rpc"         *> (RPC        <$> o .: "info")
     <|> traceType o "compute_api" *> (ComputeApi <$> o .: "info")
     <|> traceType o "nova_image"  *> (NovaImage  <$> o .: "info")
@@ -176,11 +177,11 @@ instance FromJSON TraceType where
     where
       traceType :: Object -> String -> Parser String
       traceType o n = do
-        o' <- o  .: "info" -- :: Parser Object
-        v' <- o' .: "name" -- :: Parser String
-        if v' == n
-          then pure v'
-          else fail $ show v' ++ " is not a valid TraceType"
+        o' <- o  .: "info" :: Parser Object
+        n' <- o' .: "name" :: Parser String
+        if n `L.isSuffixOf` n'
+          then pure n'
+          else fail $ show n' ++ " is not a valid TraceType"
   parseJSON v          = typeMismatch "TraceType" v
 
 
