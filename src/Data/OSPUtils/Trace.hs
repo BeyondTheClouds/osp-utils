@@ -18,7 +18,11 @@ import qualified Data.ByteString.Lazy.Internal as BLI
 
 
 -- ADTs
-data HTTP = Post | Get | Update | Delete deriving (Show, Eq)
+
+-- | rfc2616
+-- See https://ietf.org/rfc/rfc2616
+data HTTP = Options | Get | Head | Post | Put | Delete | Trace | Connect
+          deriving (Show, Eq)
 
 data HTTPReq = HTTPReq
   { path   :: String
@@ -114,8 +118,9 @@ instance ReqPath HTTPReq where
   reqPath = (.:+ [ "meta.raw_payload.wsgi-start", "info", "request" ])
 
 instance ReqPath DBReq where
-  reqPath v = v .:+ [ "meta.raw_payload.db-start", "info", "db" ]
-          <|> v .:+ [ "meta.raw_payload.neutron.db-start", "info", "db" ]
+  reqPath v
+    =   v .:+ [ "meta.raw_payload.db-start", "info", "db" ]
+    <|> v .:+ [ "meta.raw_payload.neutron.db-start", "info", "db" ]
 
 instance ReqPath PythonReq where
   reqPath v =
@@ -129,11 +134,15 @@ instance ReqPath PythonReq where
 -- FronJSON instances
 instance FromJSON HTTP where
   parseJSON (String s) = case s of
-    "POST"   -> pure Post
-    "GET"    -> pure Get
-    "UPDATE" -> pure Update
-    "DELETE" -> pure Delete
-    _        -> fail $ show s ++ " is not an HTTP verb"
+    "OPTIONS" -> pure Options
+    "GET"     -> pure Get
+    "HEAD"    -> pure Head
+    "POST"    -> pure Post
+    "PUT"     -> pure Put
+    "DELETE"  -> pure Delete
+    "TRACE"   -> pure Trace
+    "CONNECT" -> pure Connect
+    _         -> fail $ show s ++ " is not an HTTP verb"
   parseJSON v          = typeMismatch "HTTP Verb" v
 
 instance FromJSON HTTPReq where
@@ -168,7 +177,7 @@ instance (ReqPath a, FromJSON a) => FromJSON (TraceInfo a) where
 instance FromJSON TraceType where
   parseJSON (Object o)
     =   traceType o "wsgi"        *> (Wsgi       <$> o .: "info")
-    <|> (traceType o "db" <|> traceType o "neutron.db")          *> (DB         <$> o .: "info")
+    <|> traceType o "db"          *> (DB         <$> o .: "info")
     <|> traceType o "rpc"         *> (RPC        <$> o .: "info")
     <|> traceType o "compute_api" *> (ComputeApi <$> o .: "info")
     <|> traceType o "nova_image"  *> (NovaImage  <$> o .: "info")

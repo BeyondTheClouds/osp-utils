@@ -1,0 +1,76 @@
+{
+  "info": {
+    "started": 0,
+    "last_trace_started": 9465,
+    "finished": 9476,
+    "name": "total"
+  },
+  "stats": {
+    "neutron.db": {
+      "count": 154,
+      "duration": 385
+    },
+    "wsgi": {
+      "count": 65,
+      "duration": 5973
+    },
+    "db": {
+      "count": 360,
+      "duration": 671
+    },
+    "neutron_api": {
+      "count": 72,
+      "duration": 3138
+    }
+  },
+  "children": [
+    {
+      "info": {
+        "exception": "None",
+        "name": "wsgi",
+        "service": "neutron-server",
+        "started": 5900,
+        "meta.raw_payload.wsgi-stop": {
+          "info": {
+            "project": null,
+            "host": "edel-37-kavlan-4.grenoble.grid5000.fr",
+            "service": null
+          },
+          "name": "wsgi-stop",
+          "service": "neutron-server",
+          "timestamp": "2017-04-23T02:16:32.329903",
+          "trace_id": "c43bd778-3320-47bc-8000-1e01a0017deb",
+          "project": "neutron",
+          "parent_id": "95f30b4d-31e0-4438-8c01-811968ea0104",
+          "base_id": "95f30b4d-31e0-4438-8c01-811968ea0104"
+        },
+        "finished": 6097,
+        "project": "neutron",
+        "host": "edel-37-kavlan-4.grenoble.grid5000.fr",
+        "meta.raw_payload.wsgi-start": {
+          "info": {
+            "project": null,
+            "host": "edel-37-kavlan-4.grenoble.grid5000.fr",
+            "request": {
+              "path": "/v2.0/quotas/9ff09ec0d6ca490dae38bd5f88fcc450.json",
+              "scheme": "http",
+              "method": "PUT",
+              "query": ""
+            },
+            "service": null
+          },
+          "name": "wsgi-start",
+          "service": "neutron-server",
+          "timestamp": "2017-04-23T02:16:32.133514",
+          "trace_id": "c43bd778-3320-47bc-8000-1e01a0017deb",
+          "project": "neutron",
+          "parent_id": "95f30b4d-31e0-4438-8c01-811968ea0104",
+          "base_id": "95f30b4d-31e0-4438-8c01-811968ea0104"
+        }
+      },
+      "parent_id": "95f30b4d-31e0-4438-8c01-811968ea0104",
+      "trace_id": "c43bd778-3320-47bc-8000-1e01a0017deb",
+      "children": []
+    }
+  ]
+}

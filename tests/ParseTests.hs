@@ -39,10 +39,14 @@ assertParsable file = do
 testsHTTP :: Test
 testsHTTP = TestLabel "HTTP Code Parsing" $
   TestList
-  [ TestCase $ assertOSP "\"POST\""   Post
-  , TestCase $ assertOSP "\"GET\""    Get
-  , TestCase $ assertOSP "\"UPDATE\"" Update
-  , TestCase $ assertOSP "\"DELETE\"" Delete
+  [ TestCase $ assertOSP "\"OPTIONS\"" Options
+  , TestCase $ assertOSP "\"GET\""     Get
+  , TestCase $ assertOSP "\"HEAD\""    Head
+  , TestCase $ assertOSP "\"POST\""    Post
+  , TestCase $ assertOSP "\"PUT\""     Put
+  , TestCase $ assertOSP "\"DELETE\""  Delete
+  , TestCase $ assertOSP "\"TRACE\""   Trace
+  , TestCase $ assertOSP "\"CONNECT\"" Connect
   ]
 
 
@@ -210,17 +214,18 @@ testsTraces :: Test
 testsTraces = TestLabel "Trace Parsing" $ TestList $
   map (TestCase . assertParsable)
   [ "tests/rsc/empty-root.json"
-  -- , "tests/rsc/trace-boot-and-associate-floating-ip.yaml.json"
-  -- , "tests/rsc/trace-boot-and-delete.yaml.json"
-  -- , "tests/rsc/trace-boot-server-and-add-secgroup.yaml.json"
-  -- , "tests/rsc/trace-create-and-delete-image.yaml.json"
-  -- , "tests/rsc/trace-create-and-delete-networks.yaml.json"
-  -- , "tests/rsc/trace-create-and-delete-ports.yaml.json"
-  -- , "tests/rsc/trace-create-and-delete-routers.yaml.json"
-  -- , "tests/rsc/trace-create-and-delete-security-groups.yaml.json"
-  , "tests/rsc/trace-create-and-delete-security-groups.yaml.bck.json"
-  -- , "tests/rsc/trace-create-and-delete-subnets.yaml.json"
-  -- , "tests/rsc/trace-pause-and-unpause.yaml.json"
+  , "tests/rsc/wsgi.json"
+  , "tests/rsc/neutron-db.json"
+  , "tests/rsc/trace-boot-and-associate-floating-ip.yaml.json"
+  , "tests/rsc/trace-boot-and-delete.yaml.json"
+  , "tests/rsc/trace-boot-server-and-add-secgroup.yaml.json"
+  , "tests/rsc/trace-create-and-delete-image.yaml.json"
+  , "tests/rsc/trace-create-and-delete-networks.yaml.json"
+  , "tests/rsc/trace-create-and-delete-ports.yaml.json"
+  , "tests/rsc/trace-create-and-delete-routers.yaml.json"
+  , "tests/rsc/trace-create-and-delete-security-groups.yaml.json"
+  , "tests/rsc/trace-create-and-delete-subnets.yaml.json"
+  , "tests/rsc/trace-pause-and-unpause.yaml.json"
   ]
 
 
