@@ -7,12 +7,20 @@ import qualified Data.Tree as T
 import Data.OSPUtils.Trace
 
 -- | Filters trace by keeping those that satisfy the predicate.
-filter :: (TraceType -> Bool) -> Trace -> Trace
-filter p t = let filteredChildren = doChildren t
-             in t { T.subForest = L.map (filter p) filteredChildren }
+filter_aux :: (TraceType -> Bool) -> Trace -> [Trace]
+filter_aux p (T.Node root children)
+  | atLeastOne = [T.Node root filteredChildren]
+  | otherwise  = []
   where
-    doChildren :: Trace -> [Trace]
-    doChildren = L.filter (p . T.rootLabel) . T.subForest
+    atLeastOne       = (p root) || (not $ null filteredChildren)
+    filteredChildren = concat $ L.map (filter_aux p) children
+
+filter :: (TraceType -> Bool) -> Trace -> Trace
+filter p t@(T.Node root children)
+  | null filteredTree = T.Node root []
+  | otherwise         = head filteredTree
+  where
+    filteredTree = filter_aux p t
 
 -- | Folds traces of the same level by first grouping them using
 -- grouping predicate based on TraceType and then reducing each group
