@@ -44,6 +44,7 @@ data PythonReq = PythonReq
 data (Show a, Eq a) => TraceInfo a = TraceInfo
   { project  :: String
   , service  :: String
+  , host     :: String
   , start    :: String
   , stop     :: Maybe String
   , req      :: a
@@ -169,6 +170,7 @@ instance (ReqPath a, FromJSON a) => FromJSON (TraceInfo a) where
   parseJSON v@(Object o) = TraceInfo <$>
         o .: "project"
     <*> o .: "service"
+    <*> o .: "host"
     <*> ((.: "timestamp") <=< (.:*-  "-start")) o
     <*> (maybe (pure Nothing) (.: "timestamp") <=< (.:*-? "-stop"))  o
     <*> reqPath v

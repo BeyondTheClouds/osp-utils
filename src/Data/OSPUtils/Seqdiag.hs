@@ -6,6 +6,7 @@ import Data.OSPUtils.Trace
 import Data.OSPUtils.Query
 
 import Data.Maybe
+import qualified Data.List as L
 import qualified Data.Tree as T
 import qualified Data.ByteString.Lazy as BS (readFile, writeFile)
 
@@ -20,13 +21,13 @@ seqdiag t = concat $ seqdiag' serviceName t (T.subForest t)
 
     serviceName :: TraceType -> String
     serviceName Root            = "Client"
-    serviceName (Wsgi       ti) = project ti ++ "-" ++ service ti
-    serviceName (DB         ti) = project ti ++ "-" ++ service ti
-    serviceName (RPC        ti) = project ti ++ "-" ++ service ti
-    serviceName (ComputeApi ti) = project ti ++ "-" ++ service ti
-    serviceName (NovaImage  ti) = project ti ++ "-" ++ service ti
-    serviceName (NovaVirt   ti) = project ti ++ "-" ++ service ti
-    serviceName (NeutronApi ti) = project ti ++ "-" ++ service ti
+    serviceName (Wsgi       ti) = project ti ++ "-" ++ service ti ++ "-" ++ host ti
+    serviceName (DB         ti) = project ti ++ "-" ++ service ti ++ "-" ++ host ti
+    serviceName (RPC        ti) = project ti ++ "-" ++ service ti ++ "-" ++ host ti
+    serviceName (ComputeApi ti) = project ti ++ "-" ++ service ti ++ "-" ++ host ti
+    serviceName (NovaImage  ti) = project ti ++ "-" ++ service ti ++ "-" ++ host ti
+    serviceName (NovaVirt   ti) = project ti ++ "-" ++ service ti ++ "-" ++ host ti
+    serviceName (NeutronApi ti) = project ti ++ "-" ++ service ti ++ "-" ++ host ti
 
     label :: TraceType -> String
     label Root                  = "bla"
@@ -51,9 +52,29 @@ fileToTrace fp = do
   json <- BS.readFile fp
   pure $ fromMaybe (T.Node Root []) (decodeTrace json)
 
+
+traces :: [String]
+traces =
+  [ "tests/rsc/empty-root.json"
+  , "tests/rsc/wsgi.json"
+  , "tests/rsc/neutron-db.json"
+  , "tests/rsc/trace-boot-and-associate-floating-ip.yaml.json"
+  , "tests/rsc/trace-boot-and-delete.yaml.json"
+  , "tests/rsc/trace-boot-server-and-add-secgroup.yaml.json"
+  , "tests/rsc/trace-create-and-delete-image.yaml.json"
+  , "tests/rsc/trace-create-and-delete-networks.yaml.json"
+  , "tests/rsc/trace-create-and-delete-ports.yaml.json"
+  , "tests/rsc/trace-create-and-delete-routers.yaml.json"
+  , "tests/rsc/trace-create-and-delete-security-groups.yaml.json"
+  , "tests/rsc/trace-create-and-delete-subnets.yaml.json"
+  , "tests/rsc/trace-pause-and-unpause.yaml.json"
+  ]
+
 main :: IO ()
 main = do
   let query = Data.OSPUtils.Query.filter p'
+  ts <- mapM fileToTrace traces
+  putStrLn $ L.intercalate "\n" $ map (("size: " ++) . show . L.length) ts
   t <- fileToTrace "tests/rsc/trace-boot-and-delete.yaml.json"
   putStrLn $ T.drawTree $ fmap show (query t)
   writeFile "tests/rsc/out-no-fold.txt" (T.drawTree $ show <$> t)
@@ -66,6 +87,6 @@ main = do
     p _        _        = False
 
     p' :: TraceType -> Bool
-    p' (Wsgi _) = True
+    -- p' (Wsgi _) = True
     p' (RPC _) = True
     p' _ = False

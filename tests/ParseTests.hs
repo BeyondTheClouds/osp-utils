@@ -187,19 +187,19 @@ tinfodbreqparams = mkTinfodb dbreqparams
 testsTraceInfo :: Test
 testsTraceInfo = TestLabel "TraceInfo Parsing" $ TestList
   [ TestCase $ assertOSP tinfohttpreq
-                         (TraceInfo "keystone" "main"
+                         (TraceInfo "keystone" "main" "contrib-jessie"
                            "2017-03-03T14:14:01.008331" (Just "2017-03-03T14:14:01.013634")
                            (HTTPReq "/v3" Get ""))
   , TestCase $ assertOSP tinfohttpreqquery
-                         (TraceInfo "keystone" "main"
+                         (TraceInfo "keystone" "main" "contrib-jessie"
                            "2017-03-03T14:14:01.008331" (Just "2017-03-03T14:14:01.013634")
                            (HTTPReq "/v2/images" Post "limit=20"))
   , TestCase $ assertOSP tinfodbreq
-                         (TraceInfo "keystone" "main"
+                         (TraceInfo "keystone" "main" "contrib-jessie"
                            "2017-03-03T14:14:01.063490" (Just "2017-03-03T14:14:01.067126")
                            (DBReq "SELECT 1" (Object H.empty)))
   , TestCase $ assertOSP tinfodbreqparams
-                         (TraceInfo "keystone" "main"
+                         (TraceInfo "keystone" "main" "contrib-jessie"
                            "2017-03-03T14:14:01.063490" (Just "2017-03-03T14:14:01.067126")
                            (DBReq "SELECT 1"
         (Object $ H.fromList [ (pack "project_id_1", mkStrValue "b59f058989c24cd28aad3fc1357df339")
