@@ -7,6 +7,7 @@ import Data.OSPUtils.Query
 
 import Data.Maybe
 import qualified Data.List as L
+import qualified Data.List.Extra as LE (replace)
 import qualified Data.Tree as T
 import qualified Data.ByteString.Lazy as BS (readFile, writeFile)
 
@@ -53,8 +54,7 @@ fileToTrace fp = do
   pure $ fromMaybe (T.Node Root []) (decodeTrace json)
 
 
-traces :: [String]
-traces =
+tracesFilePath =
   [ "tests/rsc/empty-root.json"
   , "tests/rsc/wsgi.json"
   , "tests/rsc/neutron-db.json"
@@ -72,14 +72,17 @@ traces =
 
 main :: IO ()
 main = do
-  let query = Data.OSPUtils.Query.filter p'
-  ts <- mapM fileToTrace traces
-  putStrLn $ L.intercalate "\n" $ map (("size: " ++) . show . L.length) ts
-  t <- fileToTrace "tests/rsc/trace-boot-and-delete.yaml.json"
-  putStrLn $ T.drawTree $ fmap show (query t)
-  writeFile "tests/rsc/out-no-fold.txt" (T.drawTree $ show <$> t)
-  writeFile "tests/rsc/out-fold.txt" (T.drawTree $ show <$> query t)
-  writeFile "tests/rsc/out.dot" (seqdiagTop $ query t)
+  let q = Data.OSPUtils.Query.filter p'
+  ts <- mapM fileToTrace tracesFilePath
+  let tsNamed = zip tracesFilePath ts
+  -- Print the number of call into each scenario
+  putStrLn $ L.intercalate "\n" $ map (\(n,t) -> n ++ " size: " ++ show (L.length t)) tsNamed
+  -- Produces txt/dot files
+  putStrLn "Produces text files ..."
+  _ <- mapM (\(n,t) -> writeFile (LE.replace ".json" ".txt" n) (T.drawTree $ show <$> t)) tsNamed
+  putStrLn "Produces dot files ..."
+  _ <- mapM (\(n,t) -> writeFile (LE.replace ".json" ".dot" n) (seqdiagTop $ q t)) tsNamed
+  pure ()
   where
     p :: TraceType -> TraceType -> Bool
     -- p (Wsgi _) (Wsgi _) = True
