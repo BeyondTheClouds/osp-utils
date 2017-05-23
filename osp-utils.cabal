@@ -50,7 +50,7 @@ library
   default-language: Haskell2010
   exposed-modules:
     Data.OSPUtils.Trace, Data.OSPUtils.Query, Data.OSPUtils.Seqdiag
-  build-depends: HUnit, aeson, base, base-compat, bytestring, containers, extra, rosezipper, text, unordered-containers
+  build-depends: HUnit, aeson, base, base-compat, bytestring, containers, extra, process >= 1.4.3.0, rosezipper, text, unordered-containers
 
 
 -- executable osp-utils
@@ -76,5 +76,5 @@ test-suite tests
   type: exitcode-stdio-1.0
   hs-source-dirs: tests
   main-is: Tests.hs
-  build-depends: HUnit, aeson, base, base-compat, bytestring, containers, extra, osp-utils, rosezipper, text, unordered-containers
+  build-depends: HUnit, aeson, base, base-compat, bytestring, containers, extra, osp-utils, process >= 1.4.3.0, rosezipper, text, unordered-containers
   default-language: Haskell2010
