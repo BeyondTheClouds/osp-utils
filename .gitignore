@@ -17,3 +17,7 @@ cabal.sandbox.config
 *.eventlog
 .stack-work/
 cabal.project.local
+
+tests/rsc/*.dot
+tests/rsc/*.svg
+tests/rsc/*.txt
